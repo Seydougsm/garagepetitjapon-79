@@ -27,141 +27,375 @@ interface Annonce {
   images: string[];
 }
 
+interface GalleryImage {
+  id: number;
+  url: string;
+}
+
 const Settings = () => {
   const [annonces, setAnnonces] = useState<Annonce[]>(() => {
     const saved = localStorage.getItem('annonces');
     return saved ? JSON.parse(saved) : [];
   });
+  
+  const [newProduct, setNewProduct] = useState<Partial<Annonce>>({
+    images: []
+  });
+  
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(() => {
+    const saved = localStorage.getItem('galleryImages');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showProductDialog, setShowProductDialog] = useState(false);
 
   const stats = [
     { title: "Total Produits", value: annonces.length, icon: ShoppingBag, color: "bg-blue-500" },
     { title: "Vues", value: "1,234", icon: Users, color: "bg-green-500" },
     { title: "Posts", value: "45", icon: FileText, color: "bg-purple-500" },
-    { title: "Images", value: "89", icon: ImageIcon, color: "bg-orange-500" },
+    { title: "Images", value: galleryImages.length, icon: ImageIcon, color: "bg-orange-500" },
   ];
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold">Tableau de Bord</h1>
-          <Button onClick={() => setActiveTab('products')}>
-            <Plus className="w-4 h-4 mr-2" />
-            Ajouter un Produit
-          </Button>
-        </div>
+  const handleAddProduct = () => {
+    if (!newProduct.title || !newProduct.description || !newProduct.price || !newProduct.images?.length) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs et ajouter au moins une image",
+        variant: "destructive"
+      });
+      return;
+    }
 
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card key={index} className="border-none shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-4">
-                  <div className={`${stat.color} p-3 rounded-lg`}>
-                    <stat.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">{stat.title}</p>
-                    <h3 className="text-2xl font-bold">{stat.value}</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+    const product: Annonce = {
+      id: Date.now(),
+      title: newProduct.title,
+      description: newProduct.description,
+      price: newProduct.price,
+      images: newProduct.images
+    };
 
-        {/* Graphique et Liste */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Graphique */}
-          <Card className="lg:col-span-2 border-none shadow-sm">
-            <CardHeader>
-              <CardTitle>Aperçu des Ventes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
-                <BarChart className="w-12 h-12 text-gray-300" />
-              </div>
-            </CardContent>
-          </Card>
+    const updatedAnnonces = [...annonces, product];
+    setAnnonces(updatedAnnonces);
+    localStorage.setItem('annonces', JSON.stringify(updatedAnnonces));
+    setNewProduct({ images: [] });
+    setShowProductDialog(false);
+    toast({
+      title: "Succès",
+      description: "Le produit a été ajouté avec succès"
+    });
+  };
 
-          {/* Liste récente */}
-          <Card className="border-none shadow-sm">
-            <CardHeader>
-              <CardTitle>Activités Récentes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {annonces.slice(0, 5).map((annonce) => (
-                  <div key={annonce.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden">
-                      <img
-                        src={annonce.images[0]}
-                        alt={annonce.title}
-                        className="w-full h-full object-cover"
+  const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setNewProduct(prev => ({
+            ...prev,
+            images: [...(prev.images || []), reader.result as string]
+          }));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleGalleryImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const newImage: GalleryImage = {
+            id: Date.now(),
+            url: reader.result as string
+          };
+          const updatedImages = [...galleryImages, newImage];
+          setGalleryImages(updatedImages);
+          localStorage.setItem('galleryImages', JSON.stringify(updatedImages));
+          toast({
+            title: "Succès",
+            description: "L'image a été ajoutée à la galerie"
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'products':
+        return (
+          <div className="pl-72 space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Produits</h2>
+              <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter un produit
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Ajouter un nouveau produit</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Nom du produit</label>
+                      <Input
+                        value={newProduct.title || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, title: e.target.value })}
+                        placeholder="Nom du produit"
                       />
                     </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium">{annonce.title}</h4>
-                      <p className="text-sm text-gray-500">{annonce.price}</p>
+                    <div>
+                      <label className="text-sm font-medium">Description</label>
+                      <Textarea
+                        value={newProduct.description || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                        placeholder="Description du produit"
+                      />
                     </div>
-                    <Button variant="ghost" size="icon">
-                      <Edit className="w-4 h-4" />
+                    <div>
+                      <label className="text-sm font-medium">Prix</label>
+                      <Input
+                        value={newProduct.price || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                        placeholder="Prix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Images</label>
+                      <div 
+                        className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer mt-2"
+                        onClick={() => document.getElementById('product-images')?.click()}
+                      >
+                        <Input
+                          id="product-images"
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleProductImageUpload}
+                        />
+                        <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2 text-sm text-gray-600">Cliquez pour ajouter des images</p>
+                      </div>
+                      {newProduct.images && newProduct.images.length > 0 && (
+                        <div className="grid grid-cols-3 gap-4 mt-4">
+                          {newProduct.images.map((image, index) => (
+                            <img
+                              key={index}
+                              src={image}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <Button className="w-full" onClick={handleAddProduct}>
+                      Ajouter le produit
                     </Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
-        {/* Menu latéral */}
-        <div className="fixed left-0 top-0 h-full w-64 bg-white border-r p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <img 
-              src="/lovable-uploads/e10b4a98-2601-49a5-a202-dc319707a0c2.png" 
-              alt="Logo" 
-              className="h-8"
-            />
-            <span className="font-bold">Administration</span>
+            <div className="grid gap-6">
+              {annonces.map((annonce) => (
+                <Card key={annonce.id}>
+                  <CardContent className="flex items-center justify-between p-6">
+                    <div className="flex gap-4">
+                      <div className="flex gap-2">
+                        {annonce.images.map((image, index) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`${annonce.title} - Image ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg"
+                          />
+                        ))}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{annonce.title}</h3>
+                        <p className="text-sm text-gray-600">{annonce.description}</p>
+                        <p className="text-primary font-medium mt-1">{annonce.price}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-          
-          <nav className="space-y-2">
-            <Button
-              variant={activeTab === 'overview' ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => setActiveTab('overview')}
-            >
-              <BarChart className="mr-2 h-4 w-4" />
-              Vue d'ensemble
-            </Button>
-            <Button
-              variant={activeTab === 'products' ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => setActiveTab('products')}
-            >
-              <ShoppingBag className="mr-2 h-4 w-4" />
-              Produits
-            </Button>
-            <Button
-              variant={activeTab === 'gallery' ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => setActiveTab('gallery')}
-            >
-              <ImageIcon className="mr-2 h-4 w-4" />
-              Galerie
-            </Button>
-            <Button
-              variant={activeTab === 'settings' ? 'default' : 'ghost'}
-              className="w-full justify-start"
-              onClick={() => setActiveTab('settings')}
-            >
-              <SettingsIcon className="mr-2 h-4 w-4" />
-              Paramètres
-            </Button>
-          </nav>
+        );
+      
+      case 'gallery':
+        return (
+          <div className="pl-72 space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Galerie</h2>
+            </div>
+            
+            <div>
+              <div 
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer"
+                onClick={() => document.getElementById('gallery-images')?.click()}
+              >
+                <Input
+                  id="gallery-images"
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleGalleryImageUpload}
+                />
+                <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                <p className="mt-4 text-gray-600">Cliquez pour ajouter des images à la galerie</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6">
+              {galleryImages.map((image) => (
+                <div key={image.id} className="relative group">
+                  <img
+                    src={image.url}
+                    alt="Gallery image"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      
+      default:
+        return (
+          <div className="pl-72">
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-2xl font-bold">Tableau de Bord</h1>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {stats.map((stat, index) => (
+                <Card key={index} className="border-none shadow-sm">
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-4">
+                      <div className={`${stat.color} p-3 rounded-lg`}>
+                        <stat.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">{stat.title}</p>
+                        <h3 className="text-2xl font-bold">{stat.value}</h3>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <Card className="lg:col-span-2 border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle>Aperçu des Ventes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] flex items-center justify-center bg-gray-50 rounded-lg">
+                    <BarChart className="w-12 h-12 text-gray-300" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-none shadow-sm">
+                <CardHeader>
+                  <CardTitle>Activités Récentes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {annonces.slice(0, 5).map((annonce) => (
+                      <div key={annonce.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden">
+                          <img
+                            src={annonce.images[0]}
+                            alt={annonce.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium">{annonce.title}</h4>
+                          <p className="text-sm text-gray-500">{annonce.price}</p>
+                        </div>
+                        <Button variant="ghost" size="icon">
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Menu latéral */}
+      <div className="fixed left-0 top-0 h-full w-64 bg-white border-r p-6">
+        <div className="flex items-center gap-3 mb-8">
+          <img 
+            src="/lovable-uploads/e10b4a98-2601-49a5-a202-dc319707a0c2.png" 
+            alt="Logo" 
+            className="h-8"
+          />
+          <span className="font-bold">Administration</span>
         </div>
+        
+        <nav className="space-y-2">
+          <Button
+            variant={activeTab === 'overview' ? 'default' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveTab('overview')}
+          >
+            <BarChart className="mr-2 h-4 w-4" />
+            Vue d'ensemble
+          </Button>
+          <Button
+            variant={activeTab === 'products' ? 'default' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveTab('products')}
+          >
+            <ShoppingBag className="mr-2 h-4 w-4" />
+            Produits
+          </Button>
+          <Button
+            variant={activeTab === 'gallery' ? 'default' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveTab('gallery')}
+          >
+            <ImageIcon className="mr-2 h-4 w-4" />
+            Galerie
+          </Button>
+          <Button
+            variant={activeTab === 'settings' ? 'default' : 'ghost'}
+            className="w-full justify-start"
+            onClick={() => setActiveTab('settings')}
+          >
+            <SettingsIcon className="mr-2 h-4 w-4" />
+            Paramètres
+          </Button>
+        </nav>
+      </div>
+
+      {/* Contenu principal */}
+      <div className="p-8">
+        {renderContent()}
       </div>
     </div>
   );
