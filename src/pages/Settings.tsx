@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +31,10 @@ interface GalleryImage {
   url: string;
 }
 
+interface SiteLogo {
+  url: string;
+}
+
 const Settings = () => {
   const [annonces, setAnnonces] = useState<Annonce[]>(() => {
     const saved = localStorage.getItem('annonces');
@@ -45,6 +48,11 @@ const Settings = () => {
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(() => {
     const saved = localStorage.getItem('galleryImages');
     return saved ? JSON.parse(saved) : [];
+  });
+
+  const [siteLogo, setSiteLogo] = useState<SiteLogo>(() => {
+    const saved = localStorage.getItem('siteLogo');
+    return saved ? JSON.parse(saved) : { url: "/lovable-uploads/e10b4a98-2601-49a5-a202-dc319707a0c2.png" };
   });
 
   const { toast } = useToast();
@@ -167,6 +175,23 @@ const Settings = () => {
         };
         reader.readAsDataURL(file);
       });
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const newLogo = { url: reader.result as string };
+        setSiteLogo(newLogo);
+        localStorage.setItem('siteLogo', JSON.stringify(newLogo));
+        toast({
+          title: "Succès",
+          description: "Le logo a été mis à jour avec succès"
+        });
+      };
+      reader.readAsDataURL(files[0]);
     }
   };
 
@@ -416,6 +441,49 @@ const Settings = () => {
           </div>
         );
       
+      case 'settings':
+        return (
+          <div className="pl-72 space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold">Paramètres</h2>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Logo du site</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <img 
+                    src={siteLogo.url}
+                    alt="Logo actuel"
+                    className="h-16 object-contain"
+                  />
+                  <div>
+                    <Button
+                      variant="outline"
+                      onClick={() => document.getElementById('logo-upload')?.click()}
+                    >
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      Changer le logo
+                    </Button>
+                    <Input
+                      id="logo-upload"
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                    />
+                    <p className="text-sm text-gray-500 mt-2">
+                      Format recommandé : PNG ou JPG
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+
       default:
         return (
           <div className="pl-72">
@@ -491,7 +559,7 @@ const Settings = () => {
       <div className="fixed left-0 top-0 h-full w-64 bg-white border-r p-6">
         <div className="flex items-center gap-3 mb-8">
           <img 
-            src="/lovable-uploads/e10b4a98-2601-49a5-a202-dc319707a0c2.png" 
+            src={siteLogo.url}
             alt="Logo" 
             className="h-8"
           />
