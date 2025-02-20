@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +49,8 @@ const Settings = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [showProductDialog, setShowProductDialog] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Annonce | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const stats = [
     { title: "Total Produits", value: annonces.length, icon: ShoppingBag, color: "bg-blue-500" },
@@ -120,6 +121,48 @@ const Settings = () => {
             title: "Succès",
             description: "L'image a été ajoutée à la galerie"
           });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleDeleteProduct = (productId: number) => {
+    const updatedAnnonces = annonces.filter(annonce => annonce.id !== productId);
+    setAnnonces(updatedAnnonces);
+    localStorage.setItem('annonces', JSON.stringify(updatedAnnonces));
+    toast({
+      title: "Produit supprimé",
+      description: "Le produit a été supprimé avec succès"
+    });
+  };
+
+  const handleEditProduct = () => {
+    if (!editingProduct) return;
+
+    const updatedAnnonces = annonces.map(annonce => 
+      annonce.id === editingProduct.id ? editingProduct : annonce
+    );
+    setAnnonces(updatedAnnonces);
+    localStorage.setItem('annonces', JSON.stringify(updatedAnnonces));
+    setEditingProduct(null);
+    setShowEditDialog(false);
+    toast({
+      title: "Produit modifié",
+      description: "Le produit a été modifié avec succès"
+    });
+  };
+
+  const handleEditProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && editingProduct) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setEditingProduct(prev => ({
+            ...prev!,
+            images: [...prev!.images, reader.result as string]
+          }));
         };
         reader.readAsDataURL(file);
       });
@@ -228,10 +271,108 @@ const Settings = () => {
                         <p className="text-primary font-medium mt-1">{annonce.price}</p>
                       </div>
                     </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          setEditingProduct(annonce);
+                          setShowEditDialog(true);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleDeleteProduct(annonce.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
+
+            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Modifier le produit</DialogTitle>
+                </DialogHeader>
+                {editingProduct && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Nom du produit</label>
+                      <Input
+                        value={editingProduct.title}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, title: e.target.value })}
+                        placeholder="Nom du produit"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Description</label>
+                      <Textarea
+                        value={editingProduct.description}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                        placeholder="Description du produit"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Prix</label>
+                      <Input
+                        value={editingProduct.price}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                        placeholder="Prix"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Images</label>
+                      <div 
+                        className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer mt-2"
+                        onClick={() => document.getElementById('edit-product-images')?.click()}
+                      >
+                        <Input
+                          id="edit-product-images"
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleEditProductImageUpload}
+                        />
+                        <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2 text-sm text-gray-600">Cliquez pour ajouter des images</p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mt-4">
+                        {editingProduct.images.map((image, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={image}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setEditingProduct({
+                                ...editingProduct,
+                                images: editingProduct.images.filter((_, i) => i !== index)
+                              })}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Button className="w-full" onClick={handleEditProduct}>
+                      Enregistrer les modifications
+                    </Button>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
         );
       
@@ -346,7 +487,6 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Menu latéral */}
       <div className="fixed left-0 top-0 h-full w-64 bg-white border-r p-6">
         <div className="flex items-center gap-3 mb-8">
           <img 
@@ -393,7 +533,6 @@ const Settings = () => {
         </nav>
       </div>
 
-      {/* Contenu principal */}
       <div className="p-8">
         {renderContent()}
       </div>
