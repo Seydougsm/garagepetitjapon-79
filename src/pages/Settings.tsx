@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Edit, FileText, ShoppingBag, Image as ImageIcon, BarChart, Users, Settings as SettingsIcon } from "lucide-react";
 import {
   Card,
@@ -88,6 +89,32 @@ const Settings = () => {
     });
   };
 
+  const handleEditProduct = () => {
+    if (!editingProduct) return;
+
+    const updatedAnnonces = annonces.map(annonce => 
+      annonce.id === editingProduct.id ? editingProduct : annonce
+    );
+    setAnnonces(updatedAnnonces);
+    localStorage.setItem('annonces', JSON.stringify(updatedAnnonces));
+    setEditingProduct(null);
+    setShowEditDialog(false);
+    toast({
+      title: "Succès",
+      description: "Le produit a été modifié avec succès"
+    });
+  };
+
+  const handleDeleteProduct = (productId: number) => {
+    const updatedAnnonces = annonces.filter(annonce => annonce.id !== productId);
+    setAnnonces(updatedAnnonces);
+    localStorage.setItem('annonces', JSON.stringify(updatedAnnonces));
+    toast({
+      title: "Succès",
+      description: "Le produit a été supprimé avec succès"
+    });
+  };
+
   const handleProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -97,6 +124,22 @@ const Settings = () => {
           setNewProduct(prev => ({
             ...prev,
             images: [...(prev.images || []), reader.result as string]
+          }));
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleEditProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && editingProduct) {
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setEditingProduct(prev => ({
+            ...prev!,
+            images: [...prev!.images, reader.result as string]
           }));
         };
         reader.readAsDataURL(file);
@@ -121,48 +164,6 @@ const Settings = () => {
             title: "Succès",
             description: "L'image a été ajoutée à la galerie"
           });
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  };
-
-  const handleDeleteProduct = (productId: number) => {
-    const updatedAnnonces = annonces.filter(annonce => annonce.id !== productId);
-    setAnnonces(updatedAnnonces);
-    localStorage.setItem('annonces', JSON.stringify(updatedAnnonces));
-    toast({
-      title: "Produit supprimé",
-      description: "Le produit a été supprimé avec succès"
-    });
-  };
-
-  const handleEditProduct = () => {
-    if (!editingProduct) return;
-
-    const updatedAnnonces = annonces.map(annonce => 
-      annonce.id === editingProduct.id ? editingProduct : annonce
-    );
-    setAnnonces(updatedAnnonces);
-    localStorage.setItem('annonces', JSON.stringify(updatedAnnonces));
-    setEditingProduct(null);
-    setShowEditDialog(false);
-    toast({
-      title: "Produit modifié",
-      description: "Le produit a été modifié avec succès"
-    });
-  };
-
-  const handleEditProductImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && editingProduct) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setEditingProduct(prev => ({
-            ...prev!,
-            images: [...prev!.images, reader.result as string]
-          }));
         };
         reader.readAsDataURL(file);
       });
