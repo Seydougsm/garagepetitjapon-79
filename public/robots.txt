@@ -1,0 +1,48 @@
+
+# Robots.txt pour Garage Petit Japon
+# Site web: https://garagepetitjapon.com
+# Spécialiste des grosses cylindrées à Lomé, Togo
+
+User-agent: *
+Allow: /
+
+# Pages importantes à indexer en priorité
+Allow: /
+Allow: /services
+Allow: /contact
+Allow: /about
+Allow: /boutique
+Allow: /annonces
+Allow: /galerie
+
+# Interdire l'accès aux zones administratives
+Disallow: /admin
+Disallow: /parametres
+Disallow: /admin/
+Disallow: /parametres/
+
+# Interdire l'accès aux fichiers système
+Disallow: /api/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /*.json$
+Disallow: /*.xml$
+
+# Autoriser l'accès aux images pour l'indexation
+Allow: /lovable-uploads/
+Allow: *.jpg
+Allow: *.jpeg
+Allow: *.png
+Allow: *.gif
+Allow: *.webp
+
+# Sitemap
+Sitemap: https://garagepetitjapon.com/sitemap.xml
+
+# Délai de crawl pour éviter la surcharge
+Crawl-delay: 1
+
+# Informations de contact
+# Contact: contact@garagepetitjapon.com
+# Téléphone: 90 01 05 44 / 79 70 10 00 / 99 41 02 06
+# Adresse: 133, Av. de la Libération, Hanoukopé - BP 1364, Lomé - Togo
