@@ -13,30 +13,96 @@ const images = [
 
 const ImageCarousel = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
-    }, 5000);
+    if (!isHovered) {
+      const timer = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % images.length);
+      }, 4000);
+      return () => clearInterval(timer);
+    }
+  }, [isHovered]);
 
-    return () => clearInterval(timer);
-  }, []);
+  const goToSlide = (index: number) => {
+    setCurrentIndex(index);
+  };
+
+  const slideVariants = {
+    enter: (direction: number) => ({
+      x: direction > 0 ? 1000 : -1000,
+      opacity: 0,
+      scale: 1.1,
+    }),
+    center: {
+      zIndex: 1,
+      x: 0,
+      opacity: 1,
+      scale: 1,
+    },
+    exit: (direction: number) => ({
+      zIndex: 0,
+      x: direction < 0 ? 1000 : -1000,
+      opacity: 0,
+      scale: 0.9,
+    }),
+  };
 
   return (
-    <div className="relative h-[80vh] overflow-hidden">
-      <AnimatePresence initial={false}>
+    <div 
+      className="relative h-screen overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <AnimatePresence initial={false} custom={1}>
         <motion.img
           key={currentIndex}
           src={images[currentIndex]}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1 }}
+          custom={1}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{
+            x: { type: "spring", stiffness: 300, damping: 30 },
+            opacity: { duration: 0.5 },
+            scale: { duration: 0.5 },
+          }}
           className="absolute inset-0 w-full h-full object-cover"
           alt="Garage Petit Japon - Expertise moto"
         />
       </AnimatePresence>
-      <div className="absolute inset-0 bg-black/60" />
+      
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
+      
+      {/* Dots Navigation */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex space-x-3">
+        {images.map((_, index) => (
+          <motion.button
+            key={index}
+            whileHover={{ scale: 1.2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => goToSlide(index)}
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              index === currentIndex 
+                ? 'bg-white scale-125' 
+                : 'bg-white/50 hover:bg-white/75'
+            }`}
+          />
+        ))}
+      </div>
+      
+      {/* Progress Bar */}
+      <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
+        <motion.div
+          className="h-full bg-white"
+          initial={{ width: 0 }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 4, ease: "linear" }}
+          key={currentIndex}
+        />
+      </div>
     </div>
   );
 };
